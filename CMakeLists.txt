@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.5)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 project (loom)
 
@@ -25,6 +27,7 @@ find_package(Gurobi)
 find_package(COIN)
 find_package(Protobuf)
 find_package(LibZip)
+find_package(absl CONFIG QUIET)
 
 # set compiler flags, see http://stackoverflow.com/questions/7724569/debug-vs-release-in-cmake
 if(OPENMP_FOUND)
@@ -49,6 +52,19 @@ else()
 	elseif (NOT Protobuf_PROTOC_EXECUTABLE)
 		message(STATUS "Configuring without protbuf support, protobuf compiler was not found")
 	endif()
+endif()
+
+# Prefer imported protobuf target when available (pulls Abseil deps on newer distros).
+set(LOOM_PROTOBUF_LIBS "")
+if (TARGET protobuf::libprotobuf)
+	set(LOOM_PROTOBUF_LIBS protobuf::libprotobuf)
+elseif (Protobuf_LIBRARIES)
+	set(LOOM_PROTOBUF_LIBS ${Protobuf_LIBRARIES})
+endif()
+
+# Newer protobuf/abseil builds may require explicit Abseil log linkage.
+if (TARGET absl::log_internal_check_op)
+	list(APPEND LOOM_PROTOBUF_LIBS absl::log_internal_check_op)
 endif()
 
 if(GLPK_FOUND)
